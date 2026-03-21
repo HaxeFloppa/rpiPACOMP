@@ -3,7 +3,7 @@ import socket
 import os
 import struct
 import threading
-
+from PIL import Image, ImageTk
 
 def recvall(c, n):
     data = bytearray()
@@ -25,13 +25,11 @@ def recv_msg(c):
     return recvall(c, msg_len)
 
 
-def run_client(status_label, info_found):
+def run_client(status_label, info_found, image_taken):
     HOST = "192.168.1.148"
     # HOST = ""
     PORT = 2012
-
     os.makedirs("taken_images", exist_ok=True)
-
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((HOST, PORT))
@@ -51,10 +49,10 @@ def run_client(status_label, info_found):
                             inf_type_flag = 1
                             send_msg(s, b"info")
                             status_label.config(text=f"Image saved: {filename}")
+                            # image_taken.config(image=ImageTk.PhotoImage(Image.open(filename)))
                     else:
                         with open("info.txt", "a") as f:
                             f.write(data.decode('utf-8') + "\n")
-                        # send_msg(s, b"end")
                         inf_type_flag = 2
                         status_label.config(text="Info saved")
                         info_found.config(text=data.decode('utf-8'))
@@ -63,7 +61,7 @@ def run_client(status_label, info_found):
 
 root = tk.Tk()
 root.title("PA Comp")
-root.geometry("600x450")
+root.geometry("1920x1080")
 
 title = tk.Label(root, text="PA Comp", font=("Arial", 20))
 title.pack(pady=10)
@@ -89,10 +87,11 @@ review.grid(row=0, column=1, padx=10, pady=10)
 danger.grid(row=1, column=0, padx=10, pady=10)
 info.grid(row=1, column=1, padx=10, pady=10)
 
-
+image_taken = tk.Label(root)
+image_taken.pack(pady=10)
 status_label = tk.Label(root, text="Idle", font=("Arial", 12))
 status_label.pack(pady=5)
-info_found = tk.Label(root, text="...", font=("Arial", 12))
+info_found = tk.Label(root, text="...", font=("Arial", 25))
 info_found.pack(pady=10)
 
 start_button = tk.Button(
@@ -101,7 +100,7 @@ start_button = tk.Button(
     font=("Arial", 12),
     command=lambda: threading.Thread(
         target=run_client,
-        args=(status_label,info_found),
+        args=(status_label,info_found,image_taken,),
         daemon=True
     ).start()
 )
