@@ -25,9 +25,9 @@ def recv_msg(c):
     return recvall(c, msg_len)
 
 
-def run_client(status_label):
-    # HOST = "192.168.1.148"  
-    HOST = ""
+def run_client(status_label, info_found):
+    HOST = "192.168.1.148"
+    # HOST = ""
     PORT = 2012
 
     os.makedirs("taken_images", exist_ok=True)
@@ -101,7 +101,7 @@ start_button = tk.Button(
     font=("Arial", 12),
     command=lambda: threading.Thread(
         target=run_client,
-        args=(status_label,),
+        args=(status_label,info_found),
         daemon=True
     ).start()
 )
