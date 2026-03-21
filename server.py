@@ -39,6 +39,7 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind(("", 2012))
 print("listening on port 2012")
 s.listen()
+input("giving client time to connect")
 if sys.argv[1] == "debug":
 	client = subprocess.Popen(["python", "client/client.py"], stdout=subprocess.PIPE, text=True)
 	print("debug activated. client running locally.")
@@ -73,74 +74,68 @@ transform = transforms.Compose([
 ])
 batch_size = 4
 classes = ('eafi', 'natan')
+img_ds.setup_csv("classes", "classes/images.csv")
+trainset = img_ds.Dataset(csv_file="classes/images.csv", root_dir="classes", transform=transform)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=0)
+net = Net()
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+print("training")
+for epoch in range(2):
+    running_loss = 0.0
+    for i, data in enumerate(trainloader, 0):
+        inputs, labels = data
+        optimizer.zero_grad()
+        outputs = net(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item()
+    if i % 2000 == 1999:
+        print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
+        running_loss = 0.0
+print('finished training')
 while True:
-	print("making image")
-	img_name = f"taken_images/imgs/IMG{str(len(os.listdir('taken_images/imgs')))}.jpg"
-	cam.start_preview()
-	cam.take_photo(img_name)
-	cam.stop_preview()
-	print("image taken")
-	image_check = input("check images taken? (y/n, default to n)")
-	if image_check == 'y':
-		print(os.listdir("taken_images/imgs"))
-	else:
-		pass
-	img_ds.setup_csv("classes", "classes/images.csv")
-	img_ds.setup_csv("taken_images", "taken_images/images.csv")
-	trainset = img_ds.Dataset(csv_file="classes/images.csv", root_dir="classes", transform=transform)
-	trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=0)
-	testset = img_ds.Dataset(csv_file="taken_images/images.csv", root_dir="taken_images", transform=transform)
-	testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=0)
-	print("datasets sorted")
-	net = Net()
-	criterion = nn.CrossEntropyLoss()
-	optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-	print("training")
-	for epoch in range(2):
-		running_loss = 0.0
-		for i, data in enumerate(trainloader, 0):
-			inputs, labels = data
-			optimizer.zero_grad()
-			outputs = net(inputs)
-			loss = criterion(outputs, labels)
-			loss.backward()
-			optimizer.step()
-			running_loss += loss.item()
-		if i % 2000 == 1999:
-			print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
-			running_loss = 0.0
-	print('finished training')
-	dataiter = iter(testloader)
-	images, labels = next(dataiter)
-	# img_grid = torchvision.utils.make_grid(images)
-	# print(img_grid.tolist())
-	# print('What the images actually are: ', ' '.join(f'{classes[labels[j]]:5s}' for j in range(4)))
-	print(f"What the images actually are: {classes}")
-	outputs = net(images)
-	_, predicted = torch.max(outputs, 1)
-	print(f"predicted: {classes[predicted[0]]}")
-	c, addr = s.accept()
-	with c:
-		send_msg(c, "begin".encode('utf-8'))
-		print(f"connection from {addr}")
-		data = b""
-		while True:
-			print(data.decode())
-			while True:
-				data = recv_msg(c)
-				if data:
-					break
-			if data.decode('utf-8') == "images":
-				print("sending image")
-				send_msg(c, open(img_name, "rb").read())
-			elif data.decode('utf-8') == "info":
-				print("sending info")
-				send_msg(c, f"{classes[predicted[0]]}\n".encode())
-			elif data.decode('utf-8') == "end":
-				if sys.argv[1] == "debug":
-					sys.exit()
-				break
-			else:
-				print("unsure what recvd data is")
-				continue
-	sleep(1)
+    print("making image")
+    img_name = f"taken_images/imgs/IMG{str(len(os.listdir('taken_images/imgs')))}.jpg"
+    cam.start_preview()
+    cam.take_photo(img_name)
+    cam.stop_preview()
+    img_ds.setup_csv("taken_images", "taken_images/images.csv")
+    testset = img_ds.Dataset(csv_file="taken_images/images.csv", root_dir="taken_images", transform=transform)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=0)
+    print("datasets sorted")
+    dataiter = iter(testloader)
+    images, labels = next(dataiter)
+    print(f"What the images actually are: {classes}")
+    outputs = net(images)
+    _, predicted = torch.max(outputs, 1)
+    chosen_class = predicted[0]
+    if chosen_class > 1:
+        chosen_class = 1
+    print(f"predicted: {classes[chosen_class]}")
+    c, addr = s.accept()
+    with c:
+        send_msg(c, "begin".encode('utf-8'))
+        print(f"connection from {addr}")
+        data = b""
+        while True:
+            print(data.decode())
+            while True:
+                data = recv_msg(c)
+                if data:
+                    break
+            if data.decode('utf-8') == "images":
+                print("sending image")
+                send_msg(c, open(img_name, "rb").read())
+            elif data.decode('utf-8') == "info":
+                print("sending info")
+                send_msg(c, f"{classes[chosen_class]}\n".encode())
+                if sys.argv[1] == "debug":
+                    sys.exit()
+                break
+            else:
+                print("unsure what recvd data is")
+                continue
+    os.system("rm taken_images/images.csv taken_images/imgs/IMG0.jpg")
+    sleep(1)
