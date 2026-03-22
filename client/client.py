@@ -69,7 +69,7 @@ class HomePage(tk.Frame):
         btn_frame = tk.Frame(self)
         btn_frame.pack()
 
-        tk.Button(btn_frame, text="WEGA", bg="green",
+        tk.Button(btn_frame, text="SAFE", bg="green",
                   command=lambda: app.show_page("GalleryPage", wega_images)).grid(row=0, column=0, padx=5)
 
         tk.Button(btn_frame, text="REVIEW", bg="yellow",
@@ -113,7 +113,7 @@ class HomePage(tk.Frame):
 
         tk.Label(win, text="Choose category").pack(pady=10)
 
-        tk.Button(win, text="WEGA", bg="green",
+        tk.Button(win, text="SAFE", bg="green",
                   command=lambda: self.move_image(path, wega_images, win)).pack(fill="x")
 
         tk.Button(win, text="REVIEW", bg="yellow",
@@ -172,7 +172,7 @@ HOW TO USE PA Comp
 
 • Incoming images appear on the home screen
 • Images will be classified by the AI
-• WEGA = Safe
+• SAFE = Safe
 • REVIEW = Needs checking
 • DANGER = Serious issue
 • Use buttons at top to view stored images
