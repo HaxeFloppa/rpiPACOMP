@@ -39,6 +39,7 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind(("", 2012))
 print("listening on port 2012")
 s.listen()
+# when actually running the server code you'll want to remove this input() line... - rafi
 input("giving client time to connect")
 if sys.argv[1] == "debug":
 	client = subprocess.Popen(["python", "client/client.py"], stdout=subprocess.PIPE, text=True)
